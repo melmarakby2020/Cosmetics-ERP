@@ -18,8 +18,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Apex Software ERP | نظام إدارة الأعمال والمخازن",
-  description: "نظام متكامل لإدارة المخزون والمبيعات والمشتريات والحسابات - Apex Software",
+  title: " Apex ERP ",
+  description: "نظام متكامل لإدارة المخزون والمبيعات والمشتريات والحسابات - Apex ERP",
   manifest: "/manifest.webmanifest",
 };
 
