@@ -182,6 +182,10 @@ export default async function StatementsPage({
                             ? "فاتورة بيع"
                             : entry.kind === "purchase"
                             ? "فاتورة شراء"
+                            : entry.kind === "sale_return"
+                            ? "مرتجع مبيعات"
+                            : entry.kind === "purchase_return"
+                            ? "مرتجع مشتريات"
                             : entry.kind === "payment"
                             ? "سند دفعة"
                             : "حركة")}
@@ -219,6 +223,10 @@ export default async function StatementsPage({
                             ? "فاتورة بيع"
                             : entry.kind === "purchase"
                             ? "فاتورة شراء"
+                            : entry.kind === "sale_return"
+                            ? "مرتجع مبيعات"
+                            : entry.kind === "purchase_return"
+                            ? "مرتجع مشتريات"
                             : entry.kind === "payment"
                             ? "سند دفعة"
                             : "حركة")}

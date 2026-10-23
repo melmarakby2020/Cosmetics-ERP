@@ -1,6 +1,11 @@
-import { Pool } from "pg";
+import { createRequire } from "node:module";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(path.resolve(scriptDir, "..", "build/windows-payload/package.json"));
+const { Pool } = require("pg");
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 

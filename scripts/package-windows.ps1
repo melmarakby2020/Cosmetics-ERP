@@ -1,9 +1,12 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
 $payload = Join-Path $projectRoot "build\windows-payload"
 $output = Join-Path $projectRoot "dist-installer"
+$buildDirName = ".next-bundle"
+if ($env:NEXT_DIST_DIR) { $buildDirName = $env:NEXT_DIST_DIR }
+$buildDir = Join-Path $projectRoot $buildDirName
 $pgSource = Join-Path $projectRoot "work\postgresql-portable\pgsql"
 
 # Find node.exe dynamically
@@ -24,9 +27,7 @@ Write-Host "==========================================================" -Foregro
 Write-Host "   تجهيز حزمة ويندوز لنظام Apex Software ERP              " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-if (-not (Test-Path (Join-Path $projectRoot ".next-bundle\standalone\server.js"))) {
-  throw "ملفات Next.js standalone غير موجودة. شغّل npm run build أولاً."
-}
+if (-not (Test-Path $buildDir)) { throw "مجلد بناء Next.js غير موجود: $buildDir" }
 if (-not (Test-Path (Join-Path $pgSource "bin\pg_ctl.exe"))) { 
   throw "ملفات PostgreSQL Portable غير موجودة في $pgSource." 
 }
@@ -39,17 +40,40 @@ Remove-Item -LiteralPath $payload -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $payload | Out-Null
 
 Write-Host "[2/5] نسخ ملفات النظام وNext.js Standalone..." -ForegroundColor Yellow
-Copy-Item -Path (Join-Path $projectRoot ".next-bundle\standalone\*") -Destination $payload -Recurse -Force
+if (Test-Path (Join-Path $buildDir "standalone\server.js")) {
+  Copy-Item -Path (Join-Path $buildDir "standalone\*") -Destination $payload -Recurse -Force
+} else {
+  Write-Host "وضع الحزمة القياسي: سيتم تضمين اعتماديات التشغيل بدلاً من standalone." -ForegroundColor Yellow
+  $runtimeBuild = Join-Path $payload $buildDirName
+  New-Item -ItemType Directory -Force -Path $runtimeBuild | Out-Null
+  Copy-Item -Path (Join-Path $buildDir "*") -Destination $runtimeBuild -Recurse -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot "package.json") -Destination $payload -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot "package-lock.json") -Destination $payload -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot "next.config.ts") -Destination $payload -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot "node_modules") -Destination $payload -Recurse -Force
+  $npmCmd = Join-Path (Split-Path $nodeSource -Parent) "npm.cmd"
+  if (Test-Path $npmCmd) {
+    Push-Location $payload
+    & $npmCmd prune --omit=dev --offline
+    $pruneExitCode = $LASTEXITCODE
+    Pop-Location
+    if ($pruneExitCode -ne 0) { throw "فشل تقليم اعتماديات التطوير من الحزمة." }
+  }
+}
 New-Item -ItemType Directory -Force -Path `
-  (Join-Path $payload ".next-bundle\static"), `
+  (Join-Path $payload "$buildDirName\static"), `
   (Join-Path $payload ".next\static"), `
   (Join-Path $payload "runtime"), `
   (Join-Path $payload "drizzle"), `
   (Join-Path $payload "scripts"), `
   (Join-Path $payload "node_modules") | Out-Null
 
-Copy-Item -Path (Join-Path $projectRoot ".next-bundle\static\*") -Destination (Join-Path $payload ".next-bundle\static") -Recurse -Force
-Copy-Item -Path (Join-Path $projectRoot ".next-bundle\static\*") -Destination (Join-Path $payload ".next\static") -Recurse -Force
+$staticSource = Join-Path $buildDir "static"
+if (-not (Test-Path $staticSource)) { $staticSource = Join-Path $buildDir "standalone\static" }
+if (Test-Path $staticSource) {
+  Copy-Item -Path (Join-Path $staticSource "*") -Destination (Join-Path $payload "$buildDirName\static") -Recurse -Force
+  Copy-Item -Path (Join-Path $staticSource "*") -Destination (Join-Path $payload ".next\static") -Recurse -Force
+}
 Copy-Item -Path (Join-Path $projectRoot "public\*") -Destination (Join-Path $payload "public") -Recurse -Force
 Copy-Item -Path (Join-Path $projectRoot "drizzle\*") -Destination (Join-Path $payload "drizzle") -Recurse -Force
 
@@ -58,7 +82,7 @@ $criticalModules = @("drizzle-orm", "pg", "argon2")
 foreach ($mod in $criticalModules) {
   $srcMod = Join-Path $projectRoot "node_modules\$mod"
   $destMod = Join-Path $payload "node_modules\$mod"
-  if (Test-Path $srcMod -and -not (Test-Path $destMod)) {
+  if ((Test-Path $srcMod) -and -not (Test-Path $destMod)) {
     Copy-Item -Path $srcMod -Destination $destMod -Recurse -Force
   }
 }
@@ -88,6 +112,10 @@ Copy-Item -Path (Join-Path $pgSource "bin") -Destination $pgDestination -Recurse
 Copy-Item -Path (Join-Path $pgSource "lib") -Destination $pgDestination -Recurse -Force
 Copy-Item -Path (Join-Path $pgSource "share") -Destination $pgDestination -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $pgSource "server_license.txt") -Destination $pgDestination -ErrorAction SilentlyContinue
+$vcRedist = Join-Path $pgSource "installer\vcredist_x64.exe"
+if (-not (Test-Path $vcRedist)) { throw "ملف Visual C++ Runtime غير موجود داخل حزمة PostgreSQL." }
+New-Item -ItemType Directory -Force -Path (Join-Path $pgDestination "installer") | Out-Null
+Copy-Item -LiteralPath $vcRedist -Destination (Join-Path $pgDestination "installer\vcredist_x64.exe") -Force
 
 $payloadSizeMB = [math]::Round((Get-ChildItem $payload -Recurse -File | Measure-Object Length -Sum).Sum / 1MB)
 Write-Host "تم تجهيز مجلد الحزمة بنجاح: build\windows-payload (الحجم: $payloadSizeMB ميجابايت)" -ForegroundColor Green

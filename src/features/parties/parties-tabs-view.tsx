@@ -58,6 +58,19 @@ type LedgerEntry = {
   createdAt: Date | string;
 };
 
+function ledgerKindLabel(kind: string) {
+  const labels: Record<string, string> = {
+    sale: "فاتورة بيع",
+    purchase: "فاتورة شراء",
+    sale_return: "مرتجع مبيعات",
+    purchase_return: "مرتجع مشتريات",
+    invoice: "فاتورة تجارية",
+    payment: "سند قبض / دفع",
+    opening: "رصيد أول المدة",
+  };
+  return labels[kind] ?? kind;
+}
+
 type TabKey = "all" | "customers" | "suppliers" | "debtors" | "statement";
 
 export function PartiesTabsView({
@@ -920,13 +933,7 @@ export function PartiesTabsView({
                             <td className="p-2 text-xs font-mono font-bold">{dateFormatted}</td>
                             <td className="p-2">
                               <span className="text-xs font-black text-slate-900">
-                                {row.kind === "opening"
-                                  ? "رصيد أول المدة"
-                                  : row.kind === "invoice"
-                                  ? "فاتورة تجارية"
-                                  : row.kind === "payment"
-                                  ? "سند قبض / دفع"
-                                  : row.kind}
+                                {ledgerKindLabel(row.kind)}
                               </span>
                             </td>
                             <td className="p-2 text-xs text-slate-600 font-semibold">{row.notes ?? "—"}</td>
@@ -1200,7 +1207,7 @@ export function PartiesTabsView({
                                 ? "افتتاحي"
                                 : new Date(row.createdAt).toLocaleDateString("en-US")}
                             </td>
-                            <td className="text-[11px] font-black">{row.kind}</td>
+                            <td className="text-[11px] font-black">{ledgerKindLabel(row.kind)}</td>
                             <td className="text-[11px] text-[var(--muted)] font-bold">{row.notes ?? "—"}</td>
                             <td className="text-center text-[11px] font-black text-rose-600 font-mono">
                               {Number(row.debit) > 0 ? Number(row.debit).toLocaleString("en-US") : "—"}

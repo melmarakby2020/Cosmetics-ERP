@@ -55,7 +55,7 @@ export default async function Inventory({
 
   const can = (action: string) => grants.some((grant) => grant.action === action);
 
-  const [rows, cats, initialUnitRows] = await Promise.all([
+  const [rows, cats, initialUnitRows, skuRows] = await Promise.all([
     db
       .select()
       .from(products)
@@ -71,6 +71,10 @@ export default async function Inventory({
       .select()
       .from(units)
       .orderBy(units.factor),
+    db
+      .select({ sku: products.sku })
+      .from(products)
+      .where(isNull(products.deletedAt)),
   ]);
   let unitRows = initialUnitRows;
 
@@ -153,6 +157,7 @@ export default async function Inventory({
         {/* 3-Tab Comprehensive Inventory View */}
         <InventoryTabsView
           products={rows}
+          skuCodes={skuRows.map((row) => row.sku)}
           categories={cats}
           units={unitRows}
           can={{ create: can("create"), edit: can("edit"), delete: can("delete") }}

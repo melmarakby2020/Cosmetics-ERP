@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
@@ -18,8 +18,8 @@ if ($status -like "*no server running*") {
     $pidFile = Join-Path $pgdata "postmaster.pid"
     if (Test-Path $pidFile) { Remove-Item -Force $pidFile }
     
-    Write-Host "Starting local PostgreSQL on port 55432..." -ForegroundColor Yellow
-    & $pgctl -D $pgdata -l $logfile -o "-h 127.0.0.1 -p 55432" start
+    Write-Host "Starting local PostgreSQL on port 55433..." -ForegroundColor Yellow
+    & $pgctl -D $pgdata -l $logfile -o "-h 127.0.0.1 -p 55433" start
     Start-Sleep -Seconds 3
     
     $status = & $pgctl -D $pgdata status 2>&1

@@ -1,9 +1,91 @@
-$ErrorActionPreference = "Continue"
+﻿$ErrorActionPreference = "Continue"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 $dataDir = Join-Path $projectRoot "data"
 $envFile = Join-Path $dataDir ".env"
 $startupLog = Join-Path $dataDir "startup-error.log"
+
+function Request-InitialAdminPassword {
+  Add-Type -AssemblyName System.Windows.Forms
+  Add-Type -AssemblyName System.Drawing
+
+  $form = New-Object System.Windows.Forms.Form
+  $form.Text = "إعداد مدير النظام"
+  $form.Size = New-Object System.Drawing.Size(430, 255)
+  $form.StartPosition = "CenterScreen"
+  $form.FormBorderStyle = "FixedDialog"
+  $form.MaximizeBox = $false
+  $form.MinimizeBox = $false
+  $form.RightToLeft = "Yes"
+  $form.RightToLeftLayout = $true
+  $form.TopMost = $true
+
+  $title = New-Object System.Windows.Forms.Label
+  $title.Text = "أنشئ كلمة مرور مدير النظام (14 حرفاً على الأقل)."
+  $title.Location = New-Object System.Drawing.Point(18, 18)
+  $title.Size = New-Object System.Drawing.Size(380, 28)
+  $form.Controls.Add($title)
+
+  $passwordLabel = New-Object System.Windows.Forms.Label
+  $passwordLabel.Text = "كلمة المرور"
+  $passwordLabel.Location = New-Object System.Drawing.Point(18, 58)
+  $passwordLabel.Size = New-Object System.Drawing.Size(380, 20)
+  $form.Controls.Add($passwordLabel)
+
+  $passwordBox = New-Object System.Windows.Forms.TextBox
+  $passwordBox.Location = New-Object System.Drawing.Point(18, 80)
+  $passwordBox.Size = New-Object System.Drawing.Size(380, 25)
+  $passwordBox.UseSystemPasswordChar = $true
+  $form.Controls.Add($passwordBox)
+
+  $confirmLabel = New-Object System.Windows.Forms.Label
+  $confirmLabel.Text = "تأكيد كلمة المرور"
+  $confirmLabel.Location = New-Object System.Drawing.Point(18, 112)
+  $confirmLabel.Size = New-Object System.Drawing.Size(380, 20)
+  $form.Controls.Add($confirmLabel)
+
+  $confirmBox = New-Object System.Windows.Forms.TextBox
+  $confirmBox.Location = New-Object System.Drawing.Point(18, 134)
+  $confirmBox.Size = New-Object System.Drawing.Size(380, 25)
+  $confirmBox.UseSystemPasswordChar = $true
+  $form.Controls.Add($confirmBox)
+
+  $okButton = New-Object System.Windows.Forms.Button
+  $okButton.Text = "حفظ وتشغيل النظام"
+  $okButton.Location = New-Object System.Drawing.Point(218, 174)
+  $okButton.Size = New-Object System.Drawing.Size(180, 30)
+  $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+  $form.Controls.Add($okButton)
+  $form.AcceptButton = $okButton
+
+  $cancelButton = New-Object System.Windows.Forms.Button
+  $cancelButton.Text = "إلغاء"
+  $cancelButton.Location = New-Object System.Drawing.Point(18, 174)
+  $cancelButton.Size = New-Object System.Drawing.Size(100, 30)
+  $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+  $form.Controls.Add($cancelButton)
+  $form.CancelButton = $cancelButton
+
+  while ($true) {
+    $result = $form.ShowDialog()
+    if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
+      $form.Dispose()
+      return $null
+    }
+    if ($passwordBox.Text.Length -lt 14) {
+      [System.Windows.Forms.MessageBox]::Show("يجب أن تتكون كلمة المرور من 14 حرفاً على الأقل.", "كلمة مرور غير كافية", "OK", "Warning") | Out-Null
+      continue
+    }
+    if ($passwordBox.Text -cne $confirmBox.Text) {
+      [System.Windows.Forms.MessageBox]::Show("كلمتا المرور غير متطابقتين.", "تحقق من كلمة المرور", "OK", "Warning") | Out-Null
+      $confirmBox.Clear()
+      continue
+    }
+    $resultPassword = $passwordBox.Text
+    $form.Dispose()
+    return $resultPassword
+  }
+}
 
 try {
   New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
@@ -27,30 +109,25 @@ try {
 
   # 1. Initialize environment file (.env) if missing
   if (-not (Test-Path $envFile)) {
-    $adminPassword = $env:SEED_ADMIN_PASSWORD
-    if (-not $adminPassword -or $adminPassword.Length -lt 14) {
-      if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
-        try {
-          $securePassword = Read-Host "Admin password (minimum 14 characters, press Enter for default)" -AsSecureString
-          $inputPass = [System.Net.NetworkCredential]::new("", $securePassword).Password
-          if ($inputPass.Length -ge 14) { $adminPassword = $inputPass }
-        } catch {}
-      }
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+      $rngBytes = New-Object byte[] 48
+      $rng.GetBytes($rngBytes)
+      $authSecret = [Convert]::ToBase64String($rngBytes)
+      $dbBytes = New-Object byte[] 32
+      $rng.GetBytes($dbBytes)
+      $dbPassword = ([BitConverter]::ToString($dbBytes)).Replace("-", "").ToLowerInvariant()
+    } finally {
+      $rng.Dispose()
     }
-    if (-not $adminPassword -or $adminPassword.Length -lt 14) {
-      $adminPassword = "Admin@Apex2026!"
-    }
-
-    $rngBytes = New-Object byte[] 48
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($rngBytes)
-    $authSecret = [Convert]::ToBase64String($rngBytes)
-    $dbPassword = [Convert]::ToHexString([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
     
     $config = @(
-      "DATABASE_URL=postgres://cosmetics:$dbPassword@127.0.0.1:55432/cosmetics_erp",
+      "DATABASE_URL=postgres://cosmetics:$dbPassword@127.0.0.1:55433/cosmetics_erp",
       "AUTH_SECRET=$authSecret",
       "SESSION_COOKIE_SECURE=false",
       "TRUST_PROXY=false",
+      "NEXT_OUTPUT_MODE=standard",
+      "NEXT_DIST_DIR=.next-installer",
       "HOSTNAME=0.0.0.0",
       "PORT=3001",
       "UPLOADS_DIR=./data/uploads",
@@ -66,21 +143,6 @@ try {
       Remove-Item $pgPasswordFile -Force -ErrorAction SilentlyContinue
     }
     
-    [Environment]::SetEnvironmentVariable("ERP_FIRST_ADMIN_PASSWORD", $adminPassword, "Process")
-    
-    # Save initial credentials file
-    $credContent = @"
-========================================================
-             Apex Software ERP - بيانات الدخول
-========================================================
-اسم المستخدم: admin
-كلمة المرور : $adminPassword
-الرابط المحلي : http://localhost:3001
-========================================================
-يمكنك تغيير كلمة المرور في أي وقت من شاشة الإعدادات أو المستخدمين.
-"@
-    Set-Content -LiteralPath (Join-Path $projectRoot "بيانات_الدخول_الأولية.txt") -Value $credContent -Encoding UTF8
-    Set-Content -LiteralPath (Join-Path $dataDir "credentials.txt") -Value $credContent -Encoding UTF8
   }
 
   foreach ($line in Get-Content -LiteralPath $envFile) {
@@ -92,7 +154,7 @@ try {
   $pgRunning = $false
   try {
     $testTcp = New-Object System.Net.Sockets.TcpClient
-    $connect = $testTcp.BeginConnect("127.0.0.1", 55432, $null, $null)
+    $connect = $testTcp.BeginConnect("127.0.0.1", 55433, $null, $null)
     $wait = $connect.AsyncWaitHandle.WaitOne(1000, $false)
     if ($wait -and $testTcp.Connected) {
       $testTcp.EndConnect($connect)
@@ -105,14 +167,14 @@ try {
     $pidFile = Join-Path $pgData "postmaster.pid"
     if (Test-Path $pidFile) { Remove-Item -Force $pidFile -ErrorAction SilentlyContinue }
     
-    & $pgCtl -D $pgData -l (Join-Path $dataDir "postgres-server.log") -o "-h 127.0.0.1 -p 55432" start
+    & $pgCtl -D $pgData -l (Join-Path $dataDir "postgres-server.log") -o "-h 127.0.0.1 -p 55433" start
     
     # Wait up to 8 seconds for database socket
     for ($i = 0; $i -lt 8; $i++) {
       Start-Sleep -Seconds 1
       try {
         $testTcp = New-Object System.Net.Sockets.TcpClient
-        $connect = $testTcp.BeginConnect("127.0.0.1", 55432, $null, $null)
+        $connect = $testTcp.BeginConnect("127.0.0.1", 55433, $null, $null)
         $wait = $connect.AsyncWaitHandle.WaitOne(800, $false)
         if ($wait -and $testTcp.Connected) {
           $testTcp.EndConnect($connect)
@@ -127,9 +189,9 @@ try {
 
   # 3. Ensure database cosmetics_erp exists
   $psql = Join-Path $pgBin "psql.exe"
-  $dbExists = & $psql -h 127.0.0.1 -p 55432 -U cosmetics -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='cosmetics_erp'" 2>&1
+  $dbExists = & $psql -h 127.0.0.1 -p 55433 -U cosmetics -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='cosmetics_erp'" 2>&1
   if ($dbExists -notlike "*1*") {
-    & (Join-Path $pgBin "createdb.exe") -h 127.0.0.1 -p 55432 -U cosmetics cosmetics_erp 2>&1 | Out-Null
+    & (Join-Path $pgBin "createdb.exe") -h 127.0.0.1 -p 55433 -U cosmetics cosmetics_erp 2>&1 | Out-Null
   }
 
   # 4. Run database migrations
@@ -139,17 +201,21 @@ try {
   }
 
   # 5. Seed initial admin account
-  $adminExists = & $psql -h 127.0.0.1 -p 55432 -U cosmetics -d cosmetics_erp -tAc "SELECT 1 FROM users WHERE username='admin' LIMIT 1" 2>&1
+  $adminExists = & $psql -h 127.0.0.1 -p 55433 -U cosmetics -d cosmetics_erp -tAc "SELECT 1 FROM users WHERE username='admin' LIMIT 1" 2>&1
   if ($adminExists -notlike "*1*") {
-    if (-not $env:ERP_FIRST_ADMIN_PASSWORD) {
-      $env:ERP_FIRST_ADMIN_PASSWORD = "Admin@Apex2026!"
+    $initialAdminPassword = $env:SEED_ADMIN_PASSWORD
+    if (-not $initialAdminPassword -or $initialAdminPassword.Length -lt 14) {
+      $initialAdminPassword = Request-InitialAdminPassword
     }
-    $env:SEED_ADMIN_PASSWORD = $env:ERP_FIRST_ADMIN_PASSWORD
+    if (-not $initialAdminPassword) {
+      throw "تم إلغاء إنشاء حساب المدير. شغّل النظام مرة أخرى وأكمل إعداد كلمة المرور الأولى."
+    }
+    $env:SEED_ADMIN_PASSWORD = $initialAdminPassword
     $seedScript = Join-Path $projectRoot "scripts\seed-runtime.mjs"
     if (Test-Path $seedScript) {
       & $node $seedScript
     }
-    $env:ERP_FIRST_ADMIN_PASSWORD = $null
+    $env:SEED_ADMIN_PASSWORD = $null
     $env:SEED_ADMIN_PASSWORD = $null
   }
 
@@ -172,12 +238,14 @@ try {
         Set-Content -LiteralPath (Join-Path $dataDir "app.pid") -Value $proc.Id -Encoding ascii
       }
     } else {
-      $npmCmd = (Get-Command "npm.cmd" -ErrorAction SilentlyContinue).Source
-      if ($npmCmd) {
-        $proc = Start-Process -FilePath $npmCmd -ArgumentList @("run", "start") -WorkingDirectory $projectRoot -RedirectStandardOutput (Join-Path $dataDir "app.log") -RedirectStandardError (Join-Path $dataDir "app-error.log") -WindowStyle Hidden -PassThru
+      $nextCli = Join-Path $projectRoot "node_modules\next\dist\bin\next"
+      if (Test-Path $nextCli) {
+        $proc = Start-Process -FilePath $node -ArgumentList @($nextCli, "start", "--hostname", "0.0.0.0", "--port", "3001") -WorkingDirectory $projectRoot -RedirectStandardOutput (Join-Path $dataDir "app.log") -RedirectStandardError (Join-Path $dataDir "app-error.log") -WindowStyle Hidden -PassThru
         if ($proc) {
           Set-Content -LiteralPath (Join-Path $dataDir "app.pid") -Value $proc.Id -Encoding ascii
         }
+      } else {
+        throw "لم يتم العثور على ملفات تشغيل Next.js داخل الحزمة."
       }
     }
   }

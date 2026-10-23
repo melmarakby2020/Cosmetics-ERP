@@ -1,5 +1,11 @@
-import { hash } from "argon2";
-import pg from "pg";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(path.resolve(scriptDir, "..", "build/windows-payload/package.json"));
+const { hash } = require("argon2");
+const pg = require("pg");
 
 const { Client } = pg;
 const password = process.env.SEED_ADMIN_PASSWORD;

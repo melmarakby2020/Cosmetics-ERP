@@ -43,7 +43,11 @@
     ".next-build-final/types/**/*.ts",
     ".next-build-final/dev/types/**/*.ts",
     ".next-bundle/types/**/*.ts",
-    ".next-bundle/dev/types/**/*.ts"
+    ".next-bundle/dev/types/**/*.ts",
+    ".next-packaging/types/**/*.ts",
+    ".next-packaging/dev/types/**/*.ts",
+    ".next-installer/types/**/*.ts",
+    ".next-installer/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

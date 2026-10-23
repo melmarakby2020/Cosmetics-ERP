@@ -1,4 +1,4 @@
-$ErrorActionPreference = "SilentlyContinue"
+﻿$ErrorActionPreference = "SilentlyContinue"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 $dataDir = Join-Path $projectRoot "data"
@@ -21,7 +21,7 @@ if (Test-Path $pgCtl) {
   if ($pgStatus -like "*is running*") { $pgRunning = $true }
 }
 if ($pgRunning) {
-  Write-Host "  [+] قاعدة البيانات (PostgreSQL): تعمل بنجاح (منفذ 55432)" -ForegroundColor Green
+  Write-Host "  [+] قاعدة البيانات (PostgreSQL): تعمل بنجاح (منفذ 55433)" -ForegroundColor Green
 } else {
   Write-Host "  [-] قاعدة البيانات (PostgreSQL): متوقفة" -ForegroundColor Red
 }

@@ -149,6 +149,10 @@ export default async function PartyStatement({
                           ? "فاتورة بيع"
                           : entry.kind === "purchase"
                           ? "فاتورة شراء"
+                          : entry.kind === "sale_return"
+                          ? "مرتجع مبيعات"
+                          : entry.kind === "purchase_return"
+                          ? "مرتجع مشتريات"
                           : entry.kind === "payment"
                           ? "دفعة مالية"
                           : "حركة حساب")}

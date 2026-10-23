@@ -8,7 +8,16 @@ echo          Apex Software ERP - بناء حزمة التثبيت لنظام ا
 echo =====================================================================
 echo.
 
-echo [1/2] بناء مشروع Next.js للإنتاج (Production Standalone Build)...
+echo [1/2] بناء مشروع Next.js للإنتاج وتجهيز ملفات التشغيل...
+set "NEXT_DIST_DIR=.next-installer"
+set "NEXT_OUTPUT_MODE=standard"
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\prepare-windows-build.ps1"
+if errorlevel 1 (
+    echo.
+    echo ❌ فشل تجهيز مجلد البناء.
+    pause
+    exit /b 1
+)
 call npm run build
 if errorlevel 1 (
     echo.

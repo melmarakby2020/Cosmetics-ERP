@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Boxes,
   Edit,
@@ -47,6 +47,7 @@ type Unit = {
 
 export function InventoryTabsView({
   products,
+  skuCodes,
   categories,
   units,
   can,
@@ -62,6 +63,7 @@ export function InventoryTabsView({
   initialBarcode,
 }: {
   products: Product[];
+  skuCodes: string[];
   categories: Category[];
   units: Unit[];
   can: { create?: boolean; edit?: boolean; delete?: boolean } | ((action: string) => boolean);
@@ -93,18 +95,21 @@ export function InventoryTabsView({
   const suggestedSku = useMemo(() => {
     if (initialBarcode) return `SKU-${initialBarcode}`;
     let maxNum = 0;
-    for (const p of products) {
-      const match = p.sku.match(/(?:SKN|SKU|PRD)-?(\d+)/i);
+    for (const sku of skuCodes) {
+      const match = sku.match(/(?:SKN|SKU|PRD)-?(\d+)/i);
       if (match) {
         const val = parseInt(match[1], 10);
         if (!isNaN(val) && val > maxNum) maxNum = val;
       }
     }
-    const nextNum = maxNum > 0 ? maxNum + 1 : products.length + 1;
+    const nextNum = maxNum + 1;
     return `SKN-${String(nextNum).padStart(3, "0")}`;
-  }, [products, initialBarcode]);
+  }, [skuCodes, initialBarcode]);
 
   const [skuInput, setSkuInput] = useState(suggestedSku);
+  useEffect(() => {
+    setSkuInput(suggestedSku);
+  }, [suggestedSku]);
 
   // Mappings
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
@@ -234,7 +239,8 @@ export function InventoryTabsView({
                     type="button"
                     onClick={() => {
                       const rnd = Math.floor(100 + Math.random() * 900);
-                      setSkuInput(`SKN-${String(products.length + 1).padStart(3, "0")}-${rnd}`);
+                      const nextNum = Number(suggestedSku.match(/\d+/)?.[0] ?? 1);
+                      setSkuInput(`SKN-${String(nextNum).padStart(3, "0")}-${rnd}`);
                     }}
                     className="text-[11px] text-indigo-700 hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
                     title={t("inventory.generateSku")}

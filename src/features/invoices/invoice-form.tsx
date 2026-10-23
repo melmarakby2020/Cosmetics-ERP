@@ -509,6 +509,18 @@ export function InvoiceForm({
       if (msg.includes("INSUFFICIENT_STOCK")) {
         const item = msg.split(":")[1]?.trim() || "";
         setFormError(`عفواً، الكمية المطلوبة غير متوفرة في رصيد المستودع للصنف: ${item}`);
+      } else if (msg.includes("INVALID_INVOICE_LINES")) {
+        setFormError("تعذر قراءة أصناف الفاتورة. احذف الأصناف وأضفها مرة أخرى ثم حاول الحفظ.");
+      } else if (msg.includes("INVALID_INVOICE:")) {
+        setFormError(`بيانات الفاتورة غير مكتملة أو غير صالحة: ${msg.slice(msg.indexOf(":") + 1)}`);
+      } else if (msg.includes("PRODUCT_NOT_FOUND")) {
+        setFormError("أحد الأصناف لم يعد متاحاً أو تم إيقافه. حدّث الصفحة وأضف الصنف من جديد.");
+      } else if (msg.includes("PARTY_NOT_FOUND")) {
+        setFormError("العميل أو المورد المختار لم يعد متاحاً. اختر الطرف مرة أخرى.");
+      } else if (msg.includes("CASHBOX_NOT_FOUND")) {
+        setFormError("الخزينة المختارة غير متاحة حالياً. اختر خزينة نشطة.");
+      } else if (msg.includes("INSUFFICIENT_CASHBOX_BALANCE")) {
+        setFormError("رصيد الخزينة غير كافٍ لإتمام عملية الصرف.");
       } else if (msg.includes("ANONYMOUS_CREDIT_NOT_ALLOWED")) {
         setFormError("لا يمكن تسجيل مديونية آجلة لعميل صالة مجهول. يرجى اختيار عميل مسجل.");
       } else if (msg.includes("PRICE_BELOW_COST")) {
