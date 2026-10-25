@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 import { I18nProvider, Locale } from "@/lib/i18n-client";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  let organizationName = "Apex Software",
+  let organizationName = "Apex Software 2",
     logoPath: string | null = null,
     locale: Locale = "ar",
     theme = "system",

@@ -79,6 +79,10 @@ export default async function SettingsPage({
             <input name="organizationName" defaultValue={row?.organizationName ?? "لمسة جمال"} required />
           </label>
           <label>
+            رقم الهاتف
+            <input name="phone" type="tel" dir="ltr" defaultValue={row?.phone ?? ""} maxLength={40} />
+          </label>
+          <label>
             لغة الواجهة والاتجاه
             <select name="locale" defaultValue={row?.locale ?? "ar"}>
               <option value="ar">العربية (RTL) • Arabic</option>

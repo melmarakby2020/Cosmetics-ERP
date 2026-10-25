@@ -15,6 +15,7 @@ export async function saveSettings(formData: FormData) {
   await requirePermission("settings", "edit");
   const input = z.object({
     organizationName: z.string().trim().min(2).max(180),
+    phone: z.string().trim().max(40).optional(),
     currency: z.string().trim().min(1).max(8),
     locale: z.enum(["ar", "en"]).default("ar"),
     taxRate: z.coerce.number().finite().min(0).max(100),
@@ -66,6 +67,7 @@ export async function saveSettings(formData: FormData) {
   }
   const values = {
     organizationName: input.organizationName,
+    phone: input.phone || null,
     currency: input.currency,
     locale: input.locale,
     taxRate: input.taxRate.toFixed(4),

@@ -38,6 +38,7 @@ import {
 } from "@/server/db/schema";
 import { requirePermission } from "@/server/permissions";
 import { cashboxBalance } from "@/server/services/ledger-math";
+import { PwaInstallButton } from "@/components/pwa-install-button";
 import { localLogoUrl } from "@/server/services/branding";
 import { translate, Locale } from "@/lib/i18n";
 
@@ -315,10 +316,7 @@ export default async function Home() {
             <FilePlus size={16} />
             <span>{translate("dash.newInvoiceShortcut", locale, "فاتورة جديدة")}</span>
           </Link>
-          <div className="date-pill">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{translate("dash.liveSystem", locale, "نظام مباشر")}</span>
-          </div>
+          <PwaInstallButton />
         </div>
       </header>
 

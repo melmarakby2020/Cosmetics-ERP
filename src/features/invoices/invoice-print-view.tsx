@@ -37,6 +37,7 @@ type InvoiceData = {
   } | null;
   org: {
     organizationName: string;
+    phone: string | null;
     logoPath: string | null;
     invoiceFooter: string | null;
   } | null;
@@ -165,6 +166,11 @@ export function InvoicePrintView({ data }: { data: InvoiceData }) {
                     ? "إشعار دائن — مرتجع مبيعات"
                     : "إشعار مدين — مرتجع مشتريات"}
                 </p>
+                {org?.phone && (
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    <span dir="ltr">{org.phone}</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -288,6 +294,11 @@ export function InvoicePrintView({ data }: { data: InvoiceData }) {
             <p className="text-[11px] mt-0.5">
               {invoice.type === "sale" ? "إيصال مبيعات نقدية" : "إيصال توريد"}
             </p>
+            {org?.phone && (
+              <p className="text-[10px] mt-0.5">
+                <span dir="ltr">{org.phone}</span>
+              </p>
+            )}
             <p className="text-[10px] text-slate-600 mt-1">رقم الفاتورة: #{invoice.number}</p>
             <p className="text-[10px] text-slate-600">{dateFormatted}</p>
             <p className="text-[11px] font-bold mt-1">الطرف: {party?.name ?? "عميل صالة"}</p>
@@ -378,6 +389,11 @@ export function InvoicePrintView({ data }: { data: InvoiceData }) {
               <div>
                 <h2 className="text-xl font-black text-[var(--ink)]">إذن صرف وتسليم بضاعة من المستودع</h2>
                 <p className="text-xs text-[var(--muted)] font-bold">مستند تحضير ومطابقة المخزون والتسليم للعميل</p>
+                {org?.phone && (
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    <span dir="ltr">{org.phone}</span>
+                  </p>
+                )}
               </div>
             </div>
 
